@@ -31,7 +31,6 @@ public class SqlSplitter {
     }
 
     public void split(File sqlFile, BiConsumer<String, String> resultConsumer) {
-        System.out.println("compact:" + compact);
         final StringBuilder ddlBuilder = new StringBuilder();
         final StringBuilder dmlBuilder = new StringBuilder();
         try (FileReader fileReader = new FileReader(sqlFile);
@@ -84,7 +83,7 @@ public class SqlSplitter {
         if (one != null) {
             builder.append(one).append("\r\n");
         }
-        builder.append(another);
+        builder.append(another.replaceAll("\\s+", " "));
         boolean newLine = endWithComma(another) || !compact;
         builder.append(newLine ? "\r\n" : " ");
     }
