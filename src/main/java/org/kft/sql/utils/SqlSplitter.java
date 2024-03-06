@@ -83,9 +83,12 @@ public class SqlSplitter {
         if (one != null) {
             builder.append(one).append("\r\n");
         }
-        builder.append(another.replaceAll("\\s+", " "));
-        boolean newLine = endWithComma(another) || !compact;
-        builder.append(newLine ? "\r\n" : " ");
+        if (compact) {
+            builder.append(another.replaceAll("\\s+", " "));
+            builder.append(endWithComma(another) ? "\r\n" : " ");
+        } else {
+            builder.append(another).append("\r\n");
+        }
     }
 
     /**
