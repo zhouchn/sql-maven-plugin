@@ -1,4 +1,4 @@
-package org.kft.sql;
+package org.kft.sql.common;
 
 /**
  * <description>
