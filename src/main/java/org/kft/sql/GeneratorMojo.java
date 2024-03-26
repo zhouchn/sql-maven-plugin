@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -11,6 +12,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.kft.sql.common.TableAdapter;
 import org.kft.sql.generator.CodeGenerator;
 import org.kft.sql.generator.FileTemplate;
 import org.kft.sql.generator.FileType;
@@ -27,11 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.stream.Collectors;
-
-import static com.google.common.base.CaseFormat.LOWER_CAMEL;
-import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
-import static com.google.common.base.CaseFormat.UPPER_CAMEL;
+import java.util.stream.Stream;
 
 /**
  * sql table to java code
@@ -92,7 +90,11 @@ public class GeneratorMojo extends AbstractMojo {
             FileTemplate template = FileTemplate.newInstance();
             initCustomVariables(template, scanner);
 
-            FileUtil.consumeSegment(sqlFile, ';', sql -> createSourceCode(template, sql));
+            try (Stream<String> stream = FileUtil.statements(sqlFile, ';')) {
+                stream.filter(StringUtils::isNotBlank)
+                        .filter(SqlUtil::isDdlStatement)
+                        .forEach(sql -> createSourceCode(template, sql));
+            }
         } catch (Exception e) {
             getLog().error("generate failed.", e);
         }
@@ -128,9 +130,7 @@ public class GeneratorMojo extends AbstractMojo {
                 getLog().warn("skip sql: " + sql);
                 return;
             }
-            CreateTable createTable = (CreateTable) statement;
-
-            Table table = convertCreateTableToTable(createTable);
+            Table table = new TableAdapter((CreateTable) statement);
 
             CodeGenerator generator = new JavaCodeGenerator();
             GenerateContext generateContext = new GenerateContext();
@@ -146,23 +146,6 @@ public class GeneratorMojo extends AbstractMojo {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private Table convertCreateTableToTable(CreateTable createTable) {
-        Table table = new Table();
-        table.tableName = SqlUtil.tableName(createTable);
-        table.entityName = LOWER_UNDERSCORE.to(UPPER_CAMEL, table.tableName);
-        table.comment = SqlUtil.tableComment(createTable);
-        table.columns = createTable.getColumnDefinitions().stream().map(col -> {
-            Table.Column column = new Table.Column();
-            column.name = SqlUtil.removeWrap(col.getColumnName());
-            column.comment = SqlUtil.columnComment(col);
-            column.fieldName = LOWER_UNDERSCORE.to(LOWER_CAMEL, column.name);
-            column.type = col.getColDataType().getDataType();
-            column.javaType = typeMapping.get(col.getColDataType().getDataType().toLowerCase());
-            return column;
-        }).collect(Collectors.toList());
-        return table;
     }
 
     private String getBaseClass(FileType fileType) {

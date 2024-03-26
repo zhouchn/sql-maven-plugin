@@ -8,6 +8,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.kft.sql.utils.FileUtil;
 import org.kft.sql.utils.SqlSplitter;
 
 import java.io.BufferedWriter;
@@ -30,39 +31,33 @@ public class SplitMojo extends AbstractMojo {
     private Boolean compact;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
-    protected MavenProject project;
+    private MavenProject project;
+
+    private SqlSplitter sqlSplitter;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        final SqlSplitter sqlSplitter = new SqlSplitter(compact);
+        this.sqlSplitter = new SqlSplitter(compact);
         getLog().info("process resources, " + source);
         File directory = new File(project.getBasedir(), source);
         if (!directory.exists() || !directory.isDirectory()) {
             getLog().warn(source + " is not directory");
             return;
         }
-        recursiveTraversal(directory, sqlSplitter);
+        FileUtil.listFiles(directory)
+                .stream()
+                .filter(FileUtil::isSqlFile)
+                .forEach(this::splitSqlFile);
     }
 
-    private void recursiveTraversal(File directory, SqlSplitter sqlSplitter) {
-        File[] files = directory.listFiles();
-        if (files == null || files.length == 0) {
-            return;
-        }
-        for (File file : files) {
-            if (file.isFile() && file.getName().endsWith(".sql")) {
-                sqlSplitter.split(file, (ddl, dml) -> {
-                    getLog().info("source file: " + file.getAbsolutePath());
-                    String ddlName = appendNameSuffix(file.getName(), "_ddl");
-                    String dmlName = appendNameSuffix(file.getName(), "_dml");
-                    createAndWrite(file.getParent(), ddlName, ddl);
-                    createAndWrite(file.getParent(), dmlName, dml);
-                });
-            } else if (file.isDirectory()) {
-                getLog().info("enter " + file.getName());
-                recursiveTraversal(file, sqlSplitter);
-            }
-        }
+    private void splitSqlFile(File file) {
+        sqlSplitter.split(file, (ddl, dml) -> {
+            getLog().info("source file: " + file.getAbsolutePath());
+            String ddlName = appendNameSuffix(file.getName(), "_ddl");
+            String dmlName = appendNameSuffix(file.getName(), "_dml");
+            createAndWrite(file.getParent(), ddlName, ddl);
+            createAndWrite(file.getParent(), dmlName, dml);
+        });
     }
 
     private String appendNameSuffix(String name, String suffix) {

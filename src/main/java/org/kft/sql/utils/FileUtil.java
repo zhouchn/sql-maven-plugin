@@ -1,16 +1,17 @@
 package org.kft.sql.utils;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 
-import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * <description>
@@ -52,37 +53,58 @@ public class FileUtil {
         return IOUtils.toString(resource, StandardCharsets.UTF_8);
     }
 
-    public static String loadResources1(String fileName) throws IOException {
-        InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(fileName);
-        if (inputStream == null) {
-            return null;
-        }
-        return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+    public static File getFileFromResource(String fileName) {
+        URL resource = Thread.currentThread().getContextClassLoader().getResource(fileName);
+        return resource == null ? null : new File(resource.getFile());
     }
 
-    public static void consumeSegment(File file, char delimiter, Consumer<String> consumer) {
-        StringBuilder builder = new StringBuilder();
-        try (FileReader fr = new FileReader(file); BufferedReader br = new BufferedReader(fr)) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (StringUtils.isBlank(line)) {
-                    continue;
-                }
-                if (line.indexOf(delimiter) < 0) {
-                    builder.append(line);
-                } else {
-                    int index = line.indexOf(delimiter);
-                    builder.append(line, 0, index);
-                    consumer.accept(builder.toString());
-                    builder.setLength(0);
-                    builder.append(line, index + 1, line.length());
-                }
-            }
-            if (builder.length() != 0) {
-                consumer.accept(builder.toString());
-            }
-        } catch (Exception e) {
+    public static boolean isSqlFile(File file) {
+        return file != null && file.isFile() && file.getName().endsWith(".sql");
+    }
+
+    public static Stream<String> statements(File file, char delimiter) {
+        if (file == null || !file.exists()) {
+            return Stream.empty();
+        }
+        StatementReader statementReader;
+        try {
+            statementReader = new StatementReader(new FileReader(file), delimiter);
+            return statementReader.statements();
+        } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 递归遍历指定文件的所有下级文件
+     *
+     * @param file 扫描的根目录
+     * @return 文件列表
+     */
+    public static List<File> listFiles(File file) {
+        if (file == null || !file.exists()) {
+            return Collections.emptyList();
+        }
+        if (file.isFile()) {
+            return Collections.singletonList(file);
+        }
+        List<File> result = new LinkedList<>();
+        recursiveListFiles(file, result);
+        return result;
+    }
+
+    private static void recursiveListFiles(File file, List<File> result) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+        result.add(file);
+        if (file.isDirectory() && file.canRead()) {
+            File[] files = file.listFiles();
+            if (files != null && files.length > 0) {
+                for (File subFile : files) {
+                    recursiveListFiles(subFile, result);
+                }
+            }
         }
     }
 }

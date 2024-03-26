@@ -3,7 +3,6 @@ package org.kft.sql.utils;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.file.Paths;
 
 import static org.junit.Assert.*;
 
@@ -18,7 +17,7 @@ public class SqlSplitterTest {
     @Test
     public void split() {
         SqlSplitter sqlSplitter = new SqlSplitter(true);
-        File file = Paths.get("/Users/chaoxi/Projects/sql-maven-plugin/src/test/resources/test1.sql").toFile();
+        File file = FileUtil.getFileFromResource("test1.sql");
         sqlSplitter.split(file, (ddl, dml) -> {
             System.out.println("DDL:\r\n" + ddl);
             System.out.println("DML:\r\n" + dml);
