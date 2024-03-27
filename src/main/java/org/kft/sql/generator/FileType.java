@@ -14,7 +14,7 @@ public enum FileType {
     MAPPER("mapper", "mapper.ftl", "mapper", "Mapper"),
     SERVICE("service", "service.ftl", "service", "Service"),
     API_SERVICE("apiService", "apiService.ftl", "service", "ApiService"),
-    SERVICE_IMPL("serviceImpl", "serviceImpl.ftl", "service", "ServiceImpl"),
+    SERVICE_IMPL("serviceImpl", "serviceImpl.ftl", "impl", "ServiceImpl"),
     CONTROLLER("controller", "controller.ftl", "controller", "Controller"),
     ;
 

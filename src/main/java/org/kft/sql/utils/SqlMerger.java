@@ -17,9 +17,9 @@ import org.kft.sql.common.TableAdapter;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.stream.Stream;
 
 /**
@@ -41,10 +41,10 @@ public class SqlMerger {
         if (files.isEmpty()) {
             return;
         }
-        // merge sql file by file name order
-        Map<String, File> fileMap = new TreeMap<>();
-        files.stream().filter(FileUtil::isSqlFile).forEach(file -> fileMap.put(file.getPath(), file));
-        fileMap.forEach((key, value) -> merge(value, tableMap));
+        // merge sql file by file path order
+        files.stream().filter(FileUtil::isSqlFile)
+                .sorted(Comparator.comparing(File::getPath))
+                .forEach(sql -> merge(sql, tableMap));
         for (TableAdapter table : tableMap.values()) {
             output.append(table.toString()).append(";\r\n");
         }

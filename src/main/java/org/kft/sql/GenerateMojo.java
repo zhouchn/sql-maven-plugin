@@ -25,9 +25,7 @@ import org.kft.sql.utils.SqlUtil;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
@@ -38,28 +36,7 @@ import java.util.stream.Stream;
  * @since 2024/3/13
  **/
 @Mojo(name = "code-generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
-public class GeneratorMojo extends AbstractMojo {
-    /** mysql data type -> java data type */
-    private final Map<String, String> typeMapping = new HashMap<String, String>() {{
-        put("char", "String");
-        put("varchar", "String");
-        put("tinytext", "String");
-        put("text", "String");
-        put("mediumtext", "String");
-        put("longtext", "String");
-        put("tinyint", "Integer");
-        put("smallint", "Integer");
-        put("bit", "Boolean");
-        put("int", "Integer");
-        put("bigint", "Long");
-        put("float", "Float");
-        put("double", "Double");
-        put("decimal", "BigDecimal");
-        put("date", "java.sql.Date");
-        put("time", "java.sql.Time");
-        put("datetime", "LocalDateTime");
-        put("timestamp", "LocalDateTime");
-    }};
+public class GenerateMojo extends AbstractMojo {
     /** to be generated fileType list */
     private final List<FileType> fileTypeList = Lists.newArrayList(FileType.ENTITY, FileType.DTO, FileType.QUERY, FileType.MAPPER, FileType.SERVICE, FileType.SERVICE_IMPL, FileType.API_SERVICE, FileType.CONTROLLER);
 
@@ -93,7 +70,7 @@ public class GeneratorMojo extends AbstractMojo {
             try (Stream<String> stream = FileUtil.statements(sqlFile, ';')) {
                 stream.filter(StringUtils::isNotBlank)
                         .filter(SqlUtil::isDdlStatement)
-                        .forEach(sql -> createSourceCode(template, sql));
+                        .forEach(sql -> createSourceCode(template, sql, scanner));
             }
         } catch (Exception e) {
             getLog().error("generate failed.", e);
@@ -119,11 +96,11 @@ public class GeneratorMojo extends AbstractMojo {
     }
 
     private boolean enableCertainFunction(Scanner scanner, String function) {
-        String input = input(scanner, String.format("Whether to enable %s, yes or no", function));
+        String input = input(scanner, String.format("Whether to enable %s, yes or no:", function));
         return "y".equals(input) || "1".equals(input) || "yes".equals(input);
     }
 
-    private void createSourceCode(FileTemplate template, String sql) {
+    private void createSourceCode(FileTemplate template, String sql, Scanner scanner) {
         try {
             Statement statement = CCJSqlParserUtil.parse(sql);
             if (!(statement instanceof CreateTable)) {
@@ -135,6 +112,7 @@ public class GeneratorMojo extends AbstractMojo {
             CodeGenerator generator = new JavaCodeGenerator();
             GenerateContext generateContext = new GenerateContext();
             generateContext.log = getLog();
+            generateContext.scanner = scanner;
             generateContext.template = template;
             generateContext.sourceCodeDirectory = new File(project.getBasedir(), "src/main/java");
 

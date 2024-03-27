@@ -38,7 +38,7 @@ public class StatementReader extends BufferedReader {
         while ((line = readLine()) != null) {
             index = line.indexOf(delimiter);
             if (index < 0) {
-                buffer.append(line);
+                buffer.append(line).append("\r\n");
             } else {
                 buffer.append(line, 0, index);
                 result = buffer.toString();

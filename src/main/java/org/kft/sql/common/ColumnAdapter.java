@@ -2,7 +2,11 @@ package org.kft.sql.common;
 
 import com.google.common.base.CaseFormat;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
+import org.apache.commons.lang3.StringUtils;
 import org.kft.sql.utils.SqlUtil;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * <description>
@@ -11,6 +15,28 @@ import org.kft.sql.utils.SqlUtil;
  * @since 2024/3/22
  **/
 public class ColumnAdapter implements Column {
+    /** mysql data type -> java data type */
+    private static final Map<String, String> typeMapping = new HashMap<String, String>() {{
+        put("char", "String");
+        put("varchar", "String");
+        put("tinytext", "String");
+        put("text", "String");
+        put("mediumtext", "String");
+        put("longtext", "String");
+        put("tinyint", "Integer");
+        put("smallint", "Integer");
+        put("bit", "Boolean");
+        put("int", "Integer");
+        put("bigint", "Long");
+        put("float", "Float");
+        put("double", "Double");
+        put("decimal", "BigDecimal");
+        put("date", "java.sql.Date");
+        put("time", "java.sql.Time");
+        put("datetime", "LocalDateTime");
+        put("timestamp", "LocalDateTime");
+    }};
+
     private final ColumnDefinition column;
 
     public ColumnAdapter(ColumnDefinition column) {
@@ -34,7 +60,8 @@ public class ColumnAdapter implements Column {
 
     @Override
     public String getJavaType() {
-        return null;
+        String type = StringUtils.substringBefore(getType(), " ");
+        return typeMapping.get(type);
     }
 
     @Override
